@@ -68,22 +68,3 @@ func IsValidPublicKey(publicKey string) bool {
 	re := regexp.MustCompile("^(0[xX])?04[0-9a-fA-F]{128}$")
 	return re.MatchString(publicKey)
 }
-
-// 从私钥生成账户地址
-func GenAddressFromPrivateKey(privateKey string) string {
-	return GenAddressFromPublicKey(GenPublicKey(privateKey))
-}
-
-// 公钥生成账户地址
-// 结尾的20个字节, 对应十六进制的40个字符
-// 包含十六进制的 0x 开头
-func GenAddressFromPublicKey(publicKey string) string {
-	// 去掉公钥开头的 04 部分
-	var xy = publicKey[len("04"):]
-
-	// 转换为字节格式, 并计算 Keccak256 哈希
-	var hash = Keccak256Hash(AsBigint(xy, 16).Bytes())
-
-	// 取十六进制格式的最后40个字节作为地址
-	return "0x" + hash[len(hash)-40:]
-}
