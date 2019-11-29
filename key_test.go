@@ -38,3 +38,14 @@ func TestIsValidPublicKey(t *testing.T) {
 	tAssert(t, IsValidPublicKey(GenPublicKey(privateKey)))
 	tAssert(t, IsValidPublicKey(publicKey))
 }
+
+func TestGenAddressFromPublicKey(t *testing.T) {
+	// 测试数据来自《精通以太坊》
+	// https://github.com/ethereumbook/ethereumbook/blob/develop/04keys-addresses.asciidoc
+
+	const privateKey = "f8f8a2f43c8376ccb0871305060d7b27b0554d2cc72bccf41b2705608452f315"
+	const addresses = "0x001d3f1ef827552ae1114027bd3ecf1f086ba0f9"
+
+	var s = GenAddressFromPublicKey(GenPublicKey(privateKey))
+	tAssert(t, s == addresses, s)
+}

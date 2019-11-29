@@ -64,7 +64,21 @@ func GenPublicKey(privateKey string) string {
 // 公钥必须是十六进制格式, 开头的0x可选
 // 不计0x开头, 公钥的十六进制格式为130个字节
 // 公钥开头的04表示未压缩点, 是以太坊唯一的格式
-func IsValidPublicKey(key string) bool {
+func IsValidPublicKey(publicKey string) bool {
 	re := regexp.MustCompile("^(0[xX])?04[0-9a-fA-F]{128}$")
-	return re.MatchString(key)
+	return re.MatchString(publicKey)
+}
+
+// 公钥生成账户地址
+// 结尾的20个字节, 对应十六进制的40个字符
+// 包含十六进制的 0x 开头
+func GenAddressFromPublicKey(publicKey string) string {
+	// 去掉公钥开头的 04 部分
+	var xy = publicKey[len("04"):]
+
+	// 转换为字节格式, 并计算 Keccak256 哈希
+	var hash = Keccak256Hash(AsBigint(xy, 16).Bytes())
+
+	// 取十六进制格式的最后40个字节作为地址
+	return "0x" + hash[len(hash)-40:]
 }
