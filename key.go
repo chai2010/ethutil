@@ -12,7 +12,7 @@ import (
 )
 
 // 生成以太坊私钥
-// 十六进制格式, 包含0x头
+// 十六进制格式, 不包含0x头
 func GenPrivateKey() string {
 	// 256bit 对应 32 字节
 	var buf [32]byte
@@ -30,7 +30,7 @@ func GenPrivateKey() string {
 
 	// 最终以十六进制的格式输出
 	// 256bit对应32字节, 对应64个十六进制字符
-	return fmt.Sprintf("0x%064x", key)
+	return fmt.Sprintf("%064x", key)
 }
 
 // 是否为有效下私钥格式
@@ -42,10 +42,10 @@ func IsValidPrivateKey(key string) bool {
 }
 
 // 生成公钥(04开头)
-// 十六进制格式, 包含0x头
+// 十六进制格式, 不包含0x头
 func GenPublicKey(privateKey string) string {
 	// 私钥展开为 big.Int
-	var k = AsBigint(privateKey)
+	var k = AsBigint(privateKey, 16)
 
 	// 生成公钥算法
 	// secp256k1 椭圆曲线上定义的加法运算
@@ -54,7 +54,7 @@ func GenPublicKey(privateKey string) string {
 
 	// 格式化公钥
 	// 以太坊公钥以04开头, 然后是x和y的十六进制格式字符串
-	var publicKey = fmt.Sprintf("0x04%064x%64x", Kx, Ky)
+	var publicKey = fmt.Sprintf("04%064x%64x", Kx, Ky)
 
 	// OK
 	return publicKey
