@@ -2,120 +2,129 @@
 
 package ethutil
 
-/*
-type encryptedKeyJSONV3 struct {
-	Address string     `json:"address"`
-	Crypto  CryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
-	Version int        `json:"version"`
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/json"
+	"fmt"
+	"io"
+
+	"golang.org/x/crypto/scrypt"
+)
+
+// KeyStore对应的JSON结构
+// V1和V3基本是同样的结构
+type ksKeyJSON struct {
+	Address string       `json:"address"`
+	Crypto  ksCryptoJSON `json:"crypto"`
+	Id      string       `json:"id"`
+	Version int          `json:"version"`
 }
 
-type encryptedKeyJSONV1 struct {
-	Address string     `json:"address"`
-	Crypto  CryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
-	Version string     `json:"version"`
-}
-
-type CryptoJSON struct {
+// 加密部分的参数
+type ksCryptoJSON struct {
 	Cipher       string                 `json:"cipher"`
 	CipherText   string                 `json:"ciphertext"`
-	CipherParams cipherparamsJSON       `json:"cipherparams"`
+	CipherParams ksCipherparamsJSON     `json:"cipherparams"`
 	KDF          string                 `json:"kdf"`
 	KDFParams    map[string]interface{} `json:"kdfparams"`
 	MAC          string                 `json:"mac"`
 }
 
-type cipherparamsJSON struct {
+// 私钥加密算法需要的参数
+type ksCipherparamsJSON struct {
 	IV string `json:"iv"`
 }
-*/
 
-/*
-// EncryptKey encrypts a key using the specified scrypt parameters into a json
-// blob that can be decrypted later on.
-func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
-	keyBytes := math.PaddedBigBytes(key.PrivateKey.D, 32)
-	cryptoStruct, err := EncryptDataV3(keyBytes, []byte(auth), scryptN, scryptP)
-	if err != nil {
-		return nil, err
-	}
-	encryptedKeyJSONV3 := encryptedKeyJSONV3{
-		hex.EncodeToString(key.Address[:]),
-		cryptoStruct,
-		key.Id.String(),
-		version,
-	}
-	return json.Marshal(encryptedKeyJSONV3)
-}
+// 加密私钥
+// 生成KeyStore格式JSON
+func EncryptKey(uuid, privateKey, password string) (keyjson []byte, err error) {
+	// 生成key的长度
+	const scryptDKLen = 32
 
-// Encryptdata encrypts the data given as 'data' with the password 'auth'.
-func EncryptDataV3(data, auth []byte, scryptN, scryptP int) (CryptoJSON, error) {
+	// 默认的生成key参数, 可以调整
+	const scryptN = 262144
+	const scryptR = 8
+	const scryptP = 1
 
+	// 采用 scrypt 算法从 password 生成解密 key
 	salt := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		panic("reading from crypto/rand failed: " + err.Error())
 	}
-	derivedKey, err := scrypt.Key(auth, salt, scryptN, scryptR, scryptP, scryptDKLen)
+	derivedKey, err := scrypt.Key([]byte(password), salt, scryptN, scryptR, scryptP, scryptDKLen)
 	if err != nil {
-		return CryptoJSON{}, err
+		return nil, err
 	}
+
+	// 取生成密码的后16字节作为解密Key
 	encryptKey := derivedKey[:16]
 
+	// 生成AES解密参数
 	iv := make([]byte, aes.BlockSize) // 16
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		panic("reading from crypto/rand failed: " + err.Error())
 	}
-	cipherText, err := aesCTRXOR(encryptKey, data, iv)
-	if err != nil {
-		return CryptoJSON{}, err
-	}
-	mac := crypto.Keccak256(derivedKey[16:32], cipherText)
 
-	scryptParamsJSON := make(map[string]interface{}, 5)
-	scryptParamsJSON["n"] = scryptN
-	scryptParamsJSON["r"] = scryptR
-	scryptParamsJSON["p"] = scryptP
-	scryptParamsJSON["dklen"] = scryptDKLen
-	scryptParamsJSON["salt"] = hex.EncodeToString(salt)
-	cipherParamsJSON := cipherparamsJSON{
-		IV: hex.EncodeToString(iv),
+	// AES加密数据
+	var aesCTRXOR = func(key, inText, iv []byte) ([]byte, error) {
+		aesBlock, err := aes.NewCipher(key)
+		if err != nil {
+			return nil, err
+		}
+		stream := cipher.NewCTR(aesBlock, iv)
+		outText := make([]byte, len(inText))
+		stream.XORKeyStream(outText, inText)
+		return outText, err
 	}
 
-	cryptoStruct := CryptoJSON{
-		Cipher:       "aes-128-ctr",
-		CipherText:   hex.EncodeToString(cipherText),
-		CipherParams: cipherParamsJSON,
-		KDF:          keyHeaderKDF,
-		KDFParams:    scryptParamsJSON,
-		MAC:          hex.EncodeToString(mac),
-	}
-	return cryptoStruct, nil
-}
-
-func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
-	// AES-128 is selected due to size of encryptKey.
-	aesBlock, err := aes.NewCipher(key)
+	// 加密私钥
+	keyBytes := AsBigint(privateKey, 64).Bytes()
+	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err
 	}
-	stream := cipher.NewCTR(aesBlock, iv)
-	outText := make([]byte, len(inText))
-	stream.XORKeyStream(outText, inText)
-	return outText, err
+
+	// 记录加密私钥的参数
+	cryptoStruct := ksCryptoJSON{
+		// 私钥加密算法
+		Cipher: "aes-128-ctr",
+		// 私钥加密后的数据
+		CipherText: fmt.Sprintf("%x", cipherText),
+		// 私钥加密算法参数
+		CipherParams: ksCipherparamsJSON{
+			IV: fmt.Sprintf("%x", iv),
+		},
+
+		// 私钥加密算法key的生成算法
+		KDF: "scrypt",
+		// 生成key算法的参数
+		KDFParams: map[string]interface{}{
+			"n":     scryptN,
+			"r":     scryptR,
+			"p":     scryptP,
+			"dklen": scryptDKLen,
+			"salt":  fmt.Sprintf("%x", salt),
+		},
+
+		// password 校验码
+		MAC: Keccak256Hash(derivedKey[16:32], cipherText),
+	}
+
+	// 生成 JSON
+	return json.Marshal(&ksKeyJSON{
+		Address: GenAddressFromPrivateKey(privateKey),
+		Crypto:  cryptoStruct,
+		Id:      uuid,
+		Version: 3,
+	})
 }
 
-// PaddedBigBytes encodes a big integer as a big-endian byte slice. The length
-// of the slice is at least n bytes.
-func PaddedBigBytes(bigint *big.Int, n int) []byte {
-	if bigint.BitLen()/8 >= n {
-		return bigint.Bytes()
-	}
-	ret := make([]byte, n)
-	ReadBits(bigint, ret)
-	return ret
+// 解密私钥
+func DecryptKey(keyjson []byte, auth string) (privateKey string, err error) {
+	panic("todo")
 }
-*/
 
 /*
 
@@ -168,6 +177,42 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 		return nil, nil, err
 	}
 	return plainText, keyId, err
+}
+
+func DecryptDataV3(cryptoJson CryptoJSON, auth string) ([]byte, error) {
+	if cryptoJson.Cipher != "aes-128-ctr" {
+		return nil, fmt.Errorf("cipher not supported: %v", cryptoJson.Cipher)
+	}
+	mac, err := hex.DecodeString(cryptoJson.MAC)
+	if err != nil {
+		return nil, err
+	}
+
+	iv, err := hex.DecodeString(cryptoJson.CipherParams.IV)
+	if err != nil {
+		return nil, err
+	}
+
+	cipherText, err := hex.DecodeString(cryptoJson.CipherText)
+	if err != nil {
+		return nil, err
+	}
+
+	derivedKey, err := getKDFKey(cryptoJson, auth)
+	if err != nil {
+		return nil, err
+	}
+
+	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
+	if !bytes.Equal(calculatedMAC, mac) {
+		return nil, ErrDecrypt
+	}
+
+	plainText, err := aesCTRXOR(derivedKey[:16], cipherText, iv)
+	if err != nil {
+		return nil, err
+	}
+	return plainText, err
 }
 
 */
