@@ -39,7 +39,7 @@ type ksCipherparamsJSON struct {
 
 // 加密私钥
 // 生成KeyStore格式JSON
-func EncryptKey(uuid, privateKey, password string) (keyjson []byte, err error) {
+func KeyStoreEncryptKey(uuid, privateKey, password string) (keyjson []byte, err error) {
 	// 生成key的长度
 	const scryptDKLen = 32
 
@@ -122,51 +122,33 @@ func EncryptKey(uuid, privateKey, password string) (keyjson []byte, err error) {
 }
 
 // 解密私钥
-func DecryptKey(keyjson []byte, auth string) (privateKey string, err error) {
-	panic("todo")
+func KeyStoreDecryptKey(keyjson []byte, password string) (uuid, privateKey string, err error) {
+	// 解码JSON
+	var k ksKeyJSON
+	if err := json.Unmarshal(keyjson, &k); err != nil {
+		return "", "", err
+	}
+
+	// 处理不同版本
+	switch {
+	case k.Version == 1:
+		return k.decryptKeyV1(password)
+	case k.Version == 3:
+		return k.decryptKeyV3(password)
+	default:
+		return k.decryptKeyV3(password)
+	}
+}
+
+func (p *ksKeyJSON) decryptKeyV1(password string) (uuid, privateKey string, err error) {
+	return "", "", fmt.Errorf("todo")
+}
+
+func (p *ksKeyJSON) decryptKeyV3(password string) (uuid, privateKey string, err error) {
+	return "", "", fmt.Errorf("todo")
 }
 
 /*
-
-// DecryptKey decrypts a key from a json blob, returning the private key itself.
-func DecryptKey(keyjson []byte, auth string) (*Key, error) {
-	// Parse the json into a simple map to fetch the key version
-	m := make(map[string]interface{})
-	if err := json.Unmarshal(keyjson, &m); err != nil {
-		return nil, err
-	}
-	// Depending on the version try to parse one way or another
-	var (
-		keyBytes, keyId []byte
-		err             error
-	)
-	if version, ok := m["version"].(string); ok && version == "1" {
-		k := new(encryptedKeyJSONV1)
-		if err := json.Unmarshal(keyjson, k); err != nil {
-			return nil, err
-		}
-		keyBytes, keyId, err = decryptKeyV1(k, auth)
-	} else {
-		k := new(encryptedKeyJSONV3)
-		if err := json.Unmarshal(keyjson, k); err != nil {
-			return nil, err
-		}
-		keyBytes, keyId, err = decryptKeyV3(k, auth)
-	}
-	// Handle any decryption errors and return the key
-	if err != nil {
-		return nil, err
-	}
-	key := crypto.ToECDSAUnsafe(keyBytes)
-
-	return &Key{
-		Id:         uuid.UUID(keyId),
-		Address:    crypto.PubkeyToAddress(key.PublicKey),
-		PrivateKey: key,
-	}, nil
-}
-
-
 func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, err error) {
 	if keyProtected.Version != version {
 		return nil, nil, fmt.Errorf("version not supported: %v", keyProtected.Version)
