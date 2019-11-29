@@ -69,6 +69,11 @@ func IsValidPublicKey(publicKey string) bool {
 	return re.MatchString(publicKey)
 }
 
+// 从私钥生成账户地址
+func GenAddressFromPrivateKey(privateKey string) string {
+	return GenAddressFromPublicKey(GenPublicKey(privateKey))
+}
+
 // 公钥生成账户地址
 // 结尾的20个字节, 对应十六进制的40个字符
 // 包含十六进制的 0x 开头
