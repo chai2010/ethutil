@@ -6,9 +6,11 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"regexp"
 )
 
 // 生成以太坊私钥
+// 十六进制格式, 包含0x头
 func GenPrivateKey() string {
 	// 256bit 对应 32 字节
 	var buf [32]byte
@@ -26,5 +28,13 @@ func GenPrivateKey() string {
 
 	// 最终以十六进制的格式输出
 	// 256bit对应32字节, 对应64个十六进制字符
-	return fmt.Sprintf("%064x", key)
+	return fmt.Sprintf("0x%064x", key)
+}
+
+// 是否为有效下私钥
+// 私钥必须是十六进制格式, 开头的0x可选
+// 没有检查超出素数P的情况
+func IsValidPrivateKey(key string) bool {
+	re := regexp.MustCompile("^(0[xX])?[0-9a-fA-F]{64}$")
+	return re.MatchString(key)
 }
