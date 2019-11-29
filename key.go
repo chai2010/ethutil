@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+
+	"github.com/chai2010/ethutil/secp256k1"
 )
 
 // 生成以太坊私钥
@@ -37,4 +39,23 @@ func GenPrivateKey() string {
 func IsValidPrivateKey(key string) bool {
 	re := regexp.MustCompile("^(0[xX])?[0-9a-fA-F]{64}$")
 	return re.MatchString(key)
+}
+
+// 生成公钥(04开头)
+// 十六进制格式, 包含0x头
+func GenPublicKey(privateKey string) string {
+	// 私钥展开为 big.Int
+	var k = AsBigint(privateKey)
+
+	// 生成公钥算法
+	// secp256k1 椭圆曲线上定义的加法运算
+	// 公钥 K = k*G, K 是k*G得到的椭圆上的点
+	var Kx, Ky = secp256k1.S256().ScalarBaseMult(k.Bytes())
+
+	// 格式化公钥
+	// 以太坊公钥以04开头, 然后是x和y的十六进制格式字符串
+	var publicKey = fmt.Sprintf("0x04%064x%64x", Kx, Ky)
+
+	// OK
+	return publicKey
 }
