@@ -73,7 +73,7 @@ func KeyStoreEncryptKey(uuid, privateKey, password string) (keyjson []byte, err 
 	}
 
 	// 加密私钥
-	keyBytes := AsBigint(privateKey, 64).Bytes()
+	keyBytes := MustBigint(privateKey, 64).Bytes()
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err

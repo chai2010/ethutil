@@ -21,7 +21,7 @@ func GenAddressFromPublicKey(publicKey string) string {
 	var xy = publicKey[len("04"):]
 
 	// 转换为字节格式, 并计算 Keccak256 哈希
-	var hash = Keccak256Hash(AsBigint(xy, 16).Bytes())
+	var hash = Keccak256Hash(MustBigint(xy, 16).Bytes())
 
 	// 取十六进制格式的最后40个字节作为地址
 	return "0x" + hash[len(hash)-40:]

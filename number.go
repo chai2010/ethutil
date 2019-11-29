@@ -11,7 +11,7 @@ import (
 
 // 解析整数(失败时panic)
 // 支持二进制/八进制/十进制/十六进制
-func AsInt64(s string, base int) int64 {
+func MustInt64(s string, base int) int64 {
 	v, err := ParseInt64(s, base)
 	if err != nil {
 		log.Panic(err)
@@ -50,7 +50,7 @@ func ParseInt64(s string, base int) (v int64, err error) {
 // 解析无符号整数(失败时panic)
 // 支持二进制/八进制/十进制/十六进制
 // 失败时可以同提供的默认值代替, 否则panic
-func AsUint64(s string, base int) uint64 {
+func MustUint64(s string, base int) uint64 {
 	v, err := ParseUint64(s, base)
 	if err != nil {
 		log.Panic(err)
@@ -89,7 +89,7 @@ func ParseUint64(s string, base int) (v uint64, err error) {
 // 解析大整数(失败时panic)
 // 支持二进制/八进制/十进制/十六进制
 // 失败时可以同提供的默认值代替, 否则panic
-func AsBigint(s string, base int) *big.Int {
+func MustBigint(s string, base int) *big.Int {
 	v, err := ParseBigint(s, base)
 	if err != nil {
 		log.Panic(err)
