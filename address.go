@@ -60,3 +60,23 @@ func GenEIP55Address(address string) string {
 	// 得到新地址
 	return "0x" + string(s1)
 }
+
+// 校验EIP55地址
+//
+// EIP55通过十六进制的大小写来保存校验码信息
+//
+// 参考 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
+func CheckEIP55Address(address string) bool {
+	// 添加缺少的 0x 前缀
+	if len(address) > 2 {
+		if address[0] != '0' || (address[1] != 'x' && address[1] != 'X') {
+			address = "0x" + address
+		}
+	}
+
+	// 重新生成规范的EIP55格式地址
+	var goden = GenEIP55Address(address)
+
+	// 校验新生成的地址是否相等
+	return goden == address
+}
