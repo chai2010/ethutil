@@ -6,10 +6,15 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"strconv"
 
+	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -65,18 +70,6 @@ func KeyStoreEncryptKey(uuid, privateKey, password string) (keyjson []byte, err 
 	iv := make([]byte, aes.BlockSize) // 16
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		panic("reading from crypto/rand failed: " + err.Error())
-	}
-
-	// AES加密数据
-	var aesCTRXOR = func(key, inText, iv []byte) ([]byte, error) {
-		aesBlock, err := aes.NewCipher(key)
-		if err != nil {
-			return nil, err
-		}
-		stream := cipher.NewCTR(aesBlock, iv)
-		outText := make([]byte, len(inText))
-		stream.XORKeyStream(outText, inText)
-		return outText, err
 	}
 
 	// 加密私钥
@@ -141,60 +134,152 @@ func KeyStoreDecryptKey(keyjson []byte, password string) (uuid, privateKey strin
 }
 
 func (p *ksKeyJSON) decryptKeyV1(password string) (uuid, privateKey string, err error) {
-	return "", "", fmt.Errorf("todo")
+	if p.Crypto.Cipher != "aes-128-ctr" {
+		return "", "", fmt.Errorf("cipher not supported: %v", p.Crypto.Cipher)
+	}
+
+	// 重现加密key
+	derivedKey, err := p.getKDFKey(password)
+	if err != nil {
+		return "", "", err
+	}
+
+	// 校验 password 是否正确
+	calculatedMAC := Keccak256Hash(derivedKey[16:32], []byte(p.Crypto.CipherText))
+	if calculatedMAC != p.Crypto.MAC {
+		return "", "", errors.New("could not decrypt key with given password")
+	}
+
+	// AES 对称解密
+	plainText, err := aesCBCDecrypt(
+		derivedKey[:16],
+		[]byte(p.Crypto.CipherText),
+		[]byte(p.Crypto.CipherParams.IV),
+	)
+	if err != nil {
+		return "", "", err
+	}
+
+	// OK
+	return p.Id, fmt.Sprintf("%x", plainText), err
 }
 
 func (p *ksKeyJSON) decryptKeyV3(password string) (uuid, privateKey string, err error) {
-	return "", "", fmt.Errorf("todo")
+	if p.Crypto.Cipher != "aes-128-ctr" {
+		return "", "", fmt.Errorf("cipher not supported: %v", p.Crypto.Cipher)
+	}
+
+	// 重现加密key
+	derivedKey, err := p.getKDFKey(password)
+	if err != nil {
+		return "", "", err
+	}
+
+	// 校验 password 是否正确
+	calculatedMAC := Keccak256Hash(derivedKey[16:32], []byte(p.Crypto.CipherText))
+	if calculatedMAC != p.Crypto.MAC {
+		return "", "", errors.New("could not decrypt key with given password")
+	}
+
+	// AES 对称解密
+	plainText, err := aesCTRXOR(
+		derivedKey[:16],
+		[]byte(p.Crypto.CipherText),
+		[]byte(p.Crypto.CipherParams.IV),
+	)
+	if err != nil {
+		return "", "", err
+	}
+
+	// OK
+	return p.Id, fmt.Sprintf("%x", plainText), err
 }
 
-/*
-func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, err error) {
-	if keyProtected.Version != version {
-		return nil, nil, fmt.Errorf("version not supported: %v", keyProtected.Version)
-	}
-	keyId = uuid.Parse(keyProtected.Id)
-	plainText, err := DecryptDataV3(keyProtected.Crypto, auth)
+func (p *ksKeyJSON) getKDFKey(password string) ([]byte, error) {
+	authArray := []byte(password)
+	salt, err := hex.DecodeString(p.Crypto.KDFParams["salt"].(string))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return plainText, keyId, err
+
+	switch {
+	case p.Crypto.KDF == "scrypt":
+		return scrypt.Key(authArray, salt,
+			p.getKDFParamsInt("n"),
+			p.getKDFParamsInt("r"),
+			p.getKDFParamsInt("p"),
+			p.getKDFParamsInt("dklen"),
+		)
+
+	case p.Crypto.KDF == "pbkdf2":
+		if prf := p.getKDFParamsString("prf"); prf != "hmac-sha256" {
+			return nil, fmt.Errorf("unsupported PBKDF2 PRF: %s", prf)
+		}
+		key := pbkdf2.Key(authArray, salt,
+			p.getKDFParamsInt("c"),
+			p.getKDFParamsInt("dklen"),
+			sha256.New,
+		)
+		return key, nil
+
+	default:
+		return nil, fmt.Errorf("unsupported KDF: %s", p.Crypto.KDF)
+	}
 }
 
-func DecryptDataV3(cryptoJson CryptoJSON, auth string) ([]byte, error) {
-	if cryptoJson.Cipher != "aes-128-ctr" {
-		return nil, fmt.Errorf("cipher not supported: %v", cryptoJson.Cipher)
-	}
-	mac, err := hex.DecodeString(cryptoJson.MAC)
-	if err != nil {
-		return nil, err
-	}
-
-	iv, err := hex.DecodeString(cryptoJson.CipherParams.IV)
-	if err != nil {
-		return nil, err
-	}
-
-	cipherText, err := hex.DecodeString(cryptoJson.CipherText)
-	if err != nil {
-		return nil, err
-	}
-
-	derivedKey, err := getKDFKey(cryptoJson, auth)
-	if err != nil {
-		return nil, err
-	}
-
-	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
-	if !bytes.Equal(calculatedMAC, mac) {
-		return nil, ErrDecrypt
-	}
-
-	plainText, err := aesCTRXOR(derivedKey[:16], cipherText, iv)
-	if err != nil {
-		return nil, err
-	}
-	return plainText, err
+func (p *ksKeyJSON) getKDFParamsInt(name string) int {
+	f, _ := strconv.ParseFloat(p.getKDFParamsString(name), 64)
+	return int(f)
+}
+func (p *ksKeyJSON) getKDFParamsString(name string) string {
+	return fmt.Sprint(p.Crypto.KDFParams[name])
 }
 
-*/
+// AES加密/解密数据
+func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
+	aesBlock, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	stream := cipher.NewCTR(aesBlock, iv)
+	outText := make([]byte, len(inText))
+	stream.XORKeyStream(outText, inText)
+	return outText, err
+}
+
+// V1版本加密/解密
+func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
+	aesBlock, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	decrypter := cipher.NewCBCDecrypter(aesBlock, iv)
+	paddedPlaintext := make([]byte, len(cipherText))
+	decrypter.CryptBlocks(paddedPlaintext, cipherText)
+	plaintext := pkcs7Unpad(paddedPlaintext)
+	if plaintext == nil {
+		return nil, errors.New("could not decrypt key with given password")
+	}
+	return plaintext, err
+}
+
+// From https://leanpub.com/gocrypto/read#leanpub-auto-block-cipher-modes
+func pkcs7Unpad(in []byte) []byte {
+	if len(in) == 0 {
+		return nil
+	}
+
+	padding := in[len(in)-1]
+	if int(padding) > len(in) || padding > aes.BlockSize {
+		return nil
+	} else if padding == 0 {
+		return nil
+	}
+
+	for i := len(in) - 1; i > len(in)-int(padding)-1; i-- {
+		if in[i] != padding {
+			return nil
+		}
+	}
+	return in[:len(in)-int(padding)]
+}
