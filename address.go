@@ -3,6 +3,7 @@
 package ethutil
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -24,6 +25,12 @@ func GenAddressFromPublicKey(publicKey string) string {
 
 	// 取十六进制格式的最后40个字节作为地址
 	return "0x" + hash[len(hash)-40:]
+}
+
+// 是否为有效地址格式, 开头的0x可选
+func IsValidAddress(key string) bool {
+	re := regexp.MustCompile("^(0[xX])?[0-9a-fA-F]{40}$")
+	return re.MatchString(key)
 }
 
 // 生成EIP55校验的地址
@@ -66,7 +73,7 @@ func GenEIP55Address(address string) string {
 // EIP55通过十六进制的大小写来保存校验码信息
 //
 // 参考 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
-func CheckEIP55Address(address string) bool {
+func IsValidEIP55Address(address string) bool {
 	// 添加缺少的 0x 前缀
 	if len(address) > 2 {
 		if address[0] != '0' || (address[1] != 'x' && address[1] != 'X') {

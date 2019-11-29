@@ -41,10 +41,18 @@ func TestGenEIP55Address(t *testing.T) {
 	}
 }
 
-func TestCheckEIP55Address(t *testing.T) {
-	tAssert(t, CheckEIP55Address("001d3F1ef827552Ae1114027BD3ECF1f086bA0F9"))
-	tAssert(t, CheckEIP55Address("0x001d3F1ef827552Ae1114027BD3ECF1f086bA0F9"))
+func TestIsValidAddress(t *testing.T) {
+	tAssert(t, IsValidAddress("001d3F1ef827552Ae1114027BD3ECF1f086bA0F9"))
+	tAssert(t, IsValidAddress("0x001d3F1ef827552Ae1114027BD3ECF1f086bA0F9"))
 
-	tAssert(t, !CheckEIP55Address("001d3f1ef827552ae1114027bd3ecf1f086ba0f9"))
-	tAssert(t, !CheckEIP55Address("0x001d3f1ef827552ae1114027bd3ecf1f086ba0f9"))
+	tAssert(t, IsValidAddress("001d3f1ef827552ae1114027bd3ecf1f086ba0f9"))
+	tAssert(t, IsValidAddress("0x001d3f1ef827552ae1114027bd3ecf1f086ba0f9"))
+}
+
+func TestIsValidEIP55Address(t *testing.T) {
+	tAssert(t, IsValidEIP55Address("001d3F1ef827552Ae1114027BD3ECF1f086bA0F9"))
+	tAssert(t, IsValidEIP55Address("0x001d3F1ef827552Ae1114027BD3ECF1f086bA0F9"))
+
+	tAssert(t, !IsValidEIP55Address("001d3f1ef827552ae1114027bd3ecf1f086ba0f9"))
+	tAssert(t, !IsValidEIP55Address("0x001d3f1ef827552ae1114027bd3ecf1f086ba0f9"))
 }
