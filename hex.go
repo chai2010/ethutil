@@ -5,7 +5,10 @@ package ethutil
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
+	"math/big"
 	"regexp"
+	"strconv"
 )
 
 // 十六进制字符串
@@ -47,6 +50,60 @@ func (s HexString) IsValidPrivateKey() bool {
 func (s HexString) IsValidPublicKey() bool {
 	re := regexp.MustCompile("^(0[xX])?04[0-9a-fA-F]{128}$")
 	return re.MatchString(string(s))
+}
+
+// 转为整数
+func (s HexString) ToInt() (int64, error) {
+	if len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+		return strconv.ParseInt(string(s[2:]), 16, 64)
+	} else {
+		return strconv.ParseInt(string(s), 16, 64)
+	}
+}
+
+// 转为整数, 如果失败则panic
+func (s HexString) MustInt() int64 {
+	v, err := s.ToInt()
+	if err != nil {
+		log.Panic(err)
+	}
+	return v
+}
+
+// 转为无符号整数
+func (s HexString) ToUint() (uint64, error) {
+	if len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+		return strconv.ParseUint(string(s[2:]), 16, 64)
+	} else {
+		return strconv.ParseUint(string(s), 16, 64)
+	}
+}
+
+// 转为无符号整数, 如果失败则panic
+func (s HexString) MustUint() uint64 {
+	v, err := s.ToUint()
+	if err != nil {
+		log.Panic(err)
+	}
+	return v
+}
+
+// 转为大整数
+func (s HexString) ToBigint() (*big.Int, bool) {
+	if len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+		return new(big.Int).SetString(string(s[2:]), 2)
+	} else {
+		return new(big.Int).SetString(string(s), 2)
+	}
+}
+
+// 转为大整数, 如果失败则panic
+func (s HexString) MustBigint() *big.Int {
+	v, ok := s.ToBigint()
+	if !ok {
+		log.Panic("invalid bigint")
+	}
+	return v
 }
 
 // 转换为字节类型
