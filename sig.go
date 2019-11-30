@@ -2,6 +2,8 @@
 
 package ethutil
 
+// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
+
 // 私钥签名
 // 涉及的字符串都是十六进制编码格式
 func Sign(privateKey, digestHash string) (sig string, err error) {
@@ -15,7 +17,7 @@ func VerifySignature(pubkey, digestHash, signature string) bool {
 }
 
 // 签名导出公钥
-func GetPublicFromSign(signature string) (publicKey string, err error) {
-	// 首先解码出 v/r/s 参数
+// 涉及的字符串都是十六进制编码格式
+func GetPublicFromSign(msgHash, v, r, s string) (publicKey string, err error) {
 	panic("todo")
 }
