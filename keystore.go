@@ -18,13 +18,22 @@ import (
 	"golang.org/x/crypto/scrypt"
 )
 
-// KeyStore对应的JSON结构
-// V1和V3基本是同样的结构
+// V3版本KeyStore对应的JSON结构
+// Version 是整数类型
 type ksKeyJSON struct {
 	Address string       `json:"address"`
 	Crypto  ksCryptoJSON `json:"crypto"`
 	Id      string       `json:"id"`
 	Version int          `json:"version"`
+}
+
+// V1版本KeyStore对应的JSON结构
+// Version 是字符串类型
+type ksKeyJSONV1 struct {
+	Address string       `json:"address"`
+	Crypto  ksCryptoJSON `json:"crypto"`
+	Id      string       `json:"id"`
+	Version string       `json:"version"`
 }
 
 // 加密部分的参数
@@ -116,28 +125,39 @@ func KeyStoreEncryptKey(uuid, privateKey, password string) (keyjson []byte, err 
 
 // 解密私钥
 func KeyStoreDecryptKey(keyjson []byte, password string) (uuid, privateKey string, err error) {
-	// 解码JSON
-	var k ksKeyJSON
-	if err := json.Unmarshal(keyjson, &k); err != nil {
+	// 解码到map
+	// V1和V3版本的Version字段类型不同, 因此不能直接解码到结构体中
+	// V1的Version是字符串类型, V3版本是整数类型
+	m := make(map[string]interface{})
+	if err := json.Unmarshal(keyjson, &m); err != nil {
 		return "", "", err
 	}
 
-	// 处理不同版本
-	switch {
-	case k.Version == 1:
+	// 判读版本
+	if version, ok := m["version"].(string); ok && version == "1" {
+		var kV1 ksKeyJSONV1
+		if err := json.Unmarshal(keyjson, &kV1); err != nil {
+			return "", "", err
+		}
+
+		var k = ksKeyJSON{
+			Address: kV1.Address,
+			Crypto:  kV1.Crypto,
+			Id:      kV1.Id,
+			Version: 1,
+		}
 		return k.decryptKeyV1(password)
-	case k.Version == 3:
-		return k.decryptKeyV3(password)
-	default:
+	} else {
+		// 解码JSON
+		var k ksKeyJSON
+		if err := json.Unmarshal(keyjson, &k); err != nil {
+			return "", "", err
+		}
 		return k.decryptKeyV3(password)
 	}
 }
 
 func (p *ksKeyJSON) decryptKeyV1(password string) (uuid, privateKey string, err error) {
-	if p.Crypto.Cipher != "aes-128-ctr" {
-		return "", "", fmt.Errorf("cipher not supported: %v", p.Crypto.Cipher)
-	}
-
 	// 重现加密key
 	derivedKey, err := p.getKDFKey(password)
 	if err != nil {
@@ -152,6 +172,12 @@ func (p *ksKeyJSON) decryptKeyV1(password string) (uuid, privateKey string, err 
 	calculatedMAC := Keccak256Hash(derivedKey[16:32], cipherText)
 	if calculatedMAC != p.Crypto.MAC {
 		return "", "", errors.New("could not decrypt key with given password")
+	}
+
+	// V1版解密的密码还需要再做一次Keccak256Hash
+	derivedKey, err = hex.DecodeString(Keccak256Hash(derivedKey[:16]))
+	if err != nil {
+		return "", "", err
 	}
 
 	// AES 对称解密
