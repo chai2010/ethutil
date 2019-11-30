@@ -145,17 +145,21 @@ func (p *ksKeyJSON) decryptKeyV1(password string) (uuid, privateKey string, err 
 	}
 
 	// 校验 password 是否正确
-	calculatedMAC := Keccak256Hash(derivedKey[16:32], []byte(p.Crypto.CipherText))
+	cipherText, err := hex.DecodeString(p.Crypto.CipherText)
+	if err != nil {
+		return "", "", err
+	}
+	calculatedMAC := Keccak256Hash(derivedKey[16:32], cipherText)
 	if calculatedMAC != p.Crypto.MAC {
 		return "", "", errors.New("could not decrypt key with given password")
 	}
 
 	// AES 对称解密
-	plainText, err := aesCBCDecrypt(
-		derivedKey[:16],
-		[]byte(p.Crypto.CipherText),
-		[]byte(p.Crypto.CipherParams.IV),
-	)
+	iv, err := hex.DecodeString(p.Crypto.CipherParams.IV)
+	if err != nil {
+		return "", "", err
+	}
+	plainText, err := aesCBCDecrypt(derivedKey[:16], cipherText, iv)
 	if err != nil {
 		return "", "", err
 	}
@@ -176,17 +180,21 @@ func (p *ksKeyJSON) decryptKeyV3(password string) (uuid, privateKey string, err 
 	}
 
 	// 校验 password 是否正确
-	calculatedMAC := Keccak256Hash(derivedKey[16:32], []byte(p.Crypto.CipherText))
+	cipherText, err := hex.DecodeString(p.Crypto.CipherText)
+	if err != nil {
+		return "", "", err
+	}
+	calculatedMAC := Keccak256Hash(derivedKey[16:32], cipherText)
 	if calculatedMAC != p.Crypto.MAC {
 		return "", "", errors.New("could not decrypt key with given password")
 	}
 
 	// AES 对称解密
-	plainText, err := aesCTRXOR(
-		derivedKey[:16],
-		[]byte(p.Crypto.CipherText),
-		[]byte(p.Crypto.CipherParams.IV),
-	)
+	iv, err := hex.DecodeString(p.Crypto.CipherParams.IV)
+	if err != nil {
+		return "", "", err
+	}
+	plainText, err := aesCTRXOR(derivedKey[:16], cipherText, iv)
 	if err != nil {
 		return "", "", err
 	}
