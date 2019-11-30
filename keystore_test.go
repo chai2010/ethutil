@@ -9,6 +9,20 @@ import (
 	"io/ioutil"
 )
 
+func TestKeyStoreEncryptKey(t *testing.T) {
+	var password = "testpassword"
+	var uuid = "3198bc9c-6672-5ab3-d995-4942343ae5b6"
+	var privateKey = "7a28b5ba57c53603b0b07b56bba752f7784bf506fa95edc395f5cf6c7514fe9d"
+
+	keyjson, err := KeyStoreEncryptKey(uuid, privateKey, password)
+	tAssert(t, err == nil, err)
+
+	uuid2, privateKey2, err := KeyStoreDecryptKey(keyjson, password)
+	tAssert(t, err == nil, err)
+	tAssert(t, uuid == uuid2, uuid2)
+	tAssert(t, privateKey == privateKey2, privateKey2)
+}
+
 func TestKeyStoreDecryptKey(t *testing.T) {
 	for _, tm := range []map[string]interface{}{
 		tLoadTestdata(t, "v1_test_vector.json"),

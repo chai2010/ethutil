@@ -115,12 +115,16 @@ func KeyStoreEncryptKey(uuid, privateKey, password string) (keyjson []byte, err 
 	}
 
 	// 生成 JSON
-	return json.Marshal(&ksKeyJSON{
-		Address: GenAddressFromPrivateKey(privateKey),
-		Crypto:  cryptoStruct,
-		Id:      uuid,
-		Version: 3,
-	})
+	return json.MarshalIndent(
+		&ksKeyJSON{
+			Address: GenAddressFromPrivateKey(privateKey),
+			Crypto:  cryptoStruct,
+			Id:      uuid,
+			Version: 3,
+		},
+		"",   // 前缀
+		"\t", // 缩进
+	)
 }
 
 // 解密私钥
