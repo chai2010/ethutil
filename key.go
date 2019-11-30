@@ -45,7 +45,7 @@ func IsValidPrivateKey(key string) bool {
 // 十六进制格式, 不包含0x头
 func GenPublicKey(privateKey string) string {
 	// 私钥展开为 big.Int
-	var k = MustBigint(privateKey, 16)
+	var k = Hex(privateKey).MustBigint()
 
 	// 生成公钥算法
 	// secp256k1 椭圆曲线上定义的加法运算

@@ -17,11 +17,16 @@ func GenAddressFromPrivateKey(privateKey string) string {
 // 结尾的20个字节, 对应十六进制的40个字符
 // 包含十六进制的 0x 开头
 func GenAddressFromPublicKey(publicKey string) string {
+	// 去掉开头 0x
+	if s := publicKey; len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
+		publicKey = publicKey[2:]
+	}
+
 	// 去掉公钥开头的 04 部分
 	var xy = publicKey[len("04"):]
 
 	// 转换为字节格式, 并计算 Keccak256 哈希
-	var hash = Keccak256Hash(MustBigint(xy, 16).Bytes())
+	var hash = Keccak256Hash(Hex(xy).Bytes())
 
 	// 取十六进制格式的最后40个字节作为地址
 	return "0x" + hash[len(hash)-40:]

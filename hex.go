@@ -90,18 +90,18 @@ func (s HexString) MustUint() uint64 {
 
 // 转为大整数
 func (s HexString) ToBigint() (*big.Int, bool) {
-	if len(s) > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
-		return new(big.Int).SetString(string(s[2:]), 2)
-	} else {
-		return new(big.Int).SetString(string(s), 2)
+	d, err := s.ToBytes()
+	if err != nil {
+		return nil, false
 	}
+	return new(big.Int).SetBytes(d), true
 }
 
 // 转为大整数, 如果失败则panic
 func (s HexString) MustBigint() *big.Int {
 	v, ok := s.ToBigint()
 	if !ok {
-		log.Panic("invalid bigint")
+		log.Panic("invalid bigint: " + string(s))
 	}
 	return v
 }
