@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"regexp"
 
 	"github.com/chai2010/ethutil/secp256k1"
 )
@@ -33,14 +32,6 @@ func GenPrivateKey() string {
 	return fmt.Sprintf("%064x", key)
 }
 
-// 是否为有效下私钥格式
-// 私钥必须是十六进制格式, 开头的0x可选
-// 没有检查超出素数P的情况
-func IsValidPrivateKey(key string) bool {
-	re := regexp.MustCompile("^(0[xX])?[0-9a-fA-F]{64}$")
-	return re.MatchString(key)
-}
-
 // 生成公钥(04开头)
 // 十六进制格式, 不包含0x头
 func GenPublicKey(privateKey string) string {
@@ -58,13 +49,4 @@ func GenPublicKey(privateKey string) string {
 
 	// OK
 	return publicKey
-}
-
-// 是否为有效下公钥格式
-// 公钥必须是十六进制格式, 开头的0x可选
-// 不计0x开头, 公钥的十六进制格式为130个字节
-// 公钥开头的04表示未压缩点, 是以太坊唯一的格式
-func IsValidPublicKey(publicKey string) bool {
-	re := regexp.MustCompile("^(0[xX])?04[0-9a-fA-F]{128}$")
-	return re.MatchString(publicKey)
 }
