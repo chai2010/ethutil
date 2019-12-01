@@ -117,9 +117,12 @@ func (s HexString) ToBytes() ([]byte, error) {
 }
 
 // 转换为字节类型
-// 忽略 0x 开头部分
-func (s HexString) Bytes() []byte {
-	v, _ := s.ToBytes()
+// 忽略 0x 开头部分, 时错误panic
+func (s HexString) MustBytes() []byte {
+	v, err := s.ToBytes()
+	if err != nil {
+		log.Panic(err)
+	}
 	return v
 }
 

@@ -82,7 +82,7 @@ func KeyStoreEncryptKey(uuid, privateKey, password string) (keyjson []byte, err 
 	}
 
 	// 加密私钥
-	keyBytes := Hex(privateKey).Bytes()
+	keyBytes := Hex(privateKey).MustBytes()
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err
