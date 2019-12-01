@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/big"
 
 	"github.com/chai2010/ethutil"
 )
@@ -30,4 +31,25 @@ func main() {
 	fmt.Println(uuid)
 	fmt.Println(privateKey)
 	fmt.Println(string(keyjson))
+
+	fmt.Println(ethutil.Hex("%x", genTxData1().Hash()))
+}
+
+
+// 精通以太坊例子
+// Tx Hash: 0xaa7f03f9f4e52fcf69f836a6d2bbc7706580adce0a068ff6525ba337218e6992
+func genTxData1() *ethutil.TxData {
+	var tx = &ethutil.TxData{}
+	{
+		tx.Nonce = 0
+		tx.GasPrice, _ = new(big.Int).SetString("0x09184e72a000"[2:], 16)
+		tx.GasLimit = 0x30000
+
+		tx.To = new([20]byte)
+		to := ethutil.Hex("0xb0920c523d582040f2bcb1bd7fb1c7c1ecebdb34").MustBytes()
+		copy(tx.To[:], to)
+
+		tx.Value = big.NewInt(0)
+	}
+	return tx
 }
