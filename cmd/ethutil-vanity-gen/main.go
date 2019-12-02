@@ -9,6 +9,7 @@
 //	go run main.go -p=a
 //	go run main.go -p=abc
 //	go run main.go -p=a -s=bc
+//	go run main.go -re="^a\d.*"
 //
 package main
 
@@ -25,6 +26,7 @@ import (
 var (
 	flagPrefix = flag.String("p", "", "地址前缀, 必须是十六进制格式 ([0-9a-f]*)")
 	flagSuffix = flag.String("s", "", "地址后缀, 必须是十六进制格式 ([0-9a-f]*)")
+	flagRegexp = flag.String("re", "", "正则模式, 需要字节验证")
 	flagNumKey = flag.Int("n", 1, "生成几个地址")
 	flagHelp   = flag.Bool("h", false, "显示帮助")
 )
@@ -68,14 +70,27 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	if s := *flagRegexp; s != "" {
+		if _, err := regexp.Compile(s); err != nil {
+			fmt.Printf("非法的正则参数: %q\n", s)
+			os.Exit(1)
+		}
+	}
 
 	for i := 0; i < *flagNumKey; i++ {
-		key, addr := genVanityEth(*flagPrefix, *flagSuffix)
+		key, addr := genVanityEth(*flagPrefix, *flagSuffix, *flagRegexp)
 		fmt.Println(i, addr, key)
 	}
 }
 
-func genVanityEth(prefix, suffix string) (key, addr string) {
+func genVanityEth(prefix, suffix, reExpr string) (key, addr string) {
+	fmt.Printf("prefix=%q, suffix=%q, reExpr=%q\n", prefix, suffix, reExpr)
+
+	if reExpr == "" {
+		reExpr = ".*"
+	}
+	var re = regexp.MustCompile(reExpr)
+
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("key = %q, addr = %q\n", key, addr)
@@ -86,7 +101,10 @@ func genVanityEth(prefix, suffix string) (key, addr string) {
 	for {
 		key = ethutil.GenPrivateKey()
 		addr = ethutil.GenAddressFromPrivateKey(key)
-		if strings.HasPrefix(addr[2:], prefix) && strings.HasSuffix(addr, suffix) {
+
+		if strings.HasPrefix(addr[2:], prefix) &&
+			strings.HasSuffix(addr, suffix) &&
+			re.MatchString(addr[2:]) {
 			return
 		}
 	}

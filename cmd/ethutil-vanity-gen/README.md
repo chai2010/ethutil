@@ -51,6 +51,12 @@ $ ethutil-vanity-gen -p=a -s=bc
 0 0xab0caf3f7d6041ab91f7988791d217df83fa049c e955552c0d6ef9680ca0fb84fc356ca9...
 ```
 
+正则模式:
+
+```
+$ ethutil-vanity-gen -re="^a\d.*"
+```
+
 ## `abcdef`组成的单词表(37个)
 
 http://www.wordaxis.com/advanced-anagram/words-within
