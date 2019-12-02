@@ -6,8 +6,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-
-	"github.com/chai2010/ethutil/secp256k1"
 )
 
 // 生成以太坊私钥
@@ -41,7 +39,7 @@ func GenPublicKey(privateKey string) string {
 	// 生成公钥算法
 	// secp256k1 椭圆曲线上定义的加法运算
 	// 公钥 K = k*G, K 是k*G得到的椭圆上的点
-	var Kx, Ky = secp256k1.S256().ScalarBaseMult(k.Bytes())
+	var Kx, Ky = S256().ScalarBaseMult(k.Bytes())
 
 	// 格式化公钥
 	// 以太坊公钥以04开头, 然后是x和y的十六进制格式字符串
