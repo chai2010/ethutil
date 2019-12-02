@@ -7,7 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/big"
+	"strings"
 
 	"github.com/chai2010/ethutil"
 )
@@ -33,6 +33,15 @@ func main() {
 	fmt.Println(string(keyjson))
 
 	fmt.Println(ethutil.Hex("%x", genTxData1().Hash()))
+	fmt.Println(ethutil.Hex("%x", genTxData2().Hash()))
+
+	var sgiData = "0xec098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080018080"
+	fmt.Println(ethutil.Keccak256Hash(ethutil.Hex(sgiData).MustBytes()))
+
+	// 0xec098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080018080
+	fmt.Println(ethutil.Hex("%x", genTxData2().SigData()))
+	//fmt.Println(ethutil.Hex("%x", genTxData2().SigDataEIP155()))
+
 }
 
 
@@ -42,14 +51,27 @@ func genTxData1() *ethutil.TxData {
 	var tx = &ethutil.TxData{}
 	{
 		tx.Nonce = 0
-		tx.GasPrice, _ = new(big.Int).SetString("0x09184e72a000"[2:], 16)
-		tx.GasLimit = 0x30000
-
-		tx.To = new([20]byte)
-		to := ethutil.Hex("0xb0920c523d582040f2bcb1bd7fb1c7c1ecebdb34").MustBytes()
-		copy(tx.To[:], to)
-
-		tx.Value = big.NewInt(0)
+		tx.GasPrice = "0x09184e72a000"
+		tx.GasLimit = "0x30000"
+		tx.To = "0xb0920c523d582040f2bcb1bd7fb1c7c1ecebdb34"
+		tx.Value = "0"
 	}
 	return tx
 }
+
+// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
+func genTxData2() *ethutil.TxData {
+	var tx = &ethutil.TxData{}
+	{
+		tx.Nonce = 9
+		tx.GasPrice = "20"+strings.Repeat("0", 9)
+		tx.GasLimit = "21000"
+		tx.To = "0x3535353535353535353535353535353535353535"
+		tx.Value = "1"+strings.Repeat("0", 18)
+	}
+	return tx
+}
+
+/*
+Consider a transaction with nonce = 9, gasprice = 20 * 10**9, startgas = 21000, to = 0x3535353535353535353535353535353535353535, value = 10**18, data=''
+*/

@@ -23,6 +23,12 @@ func Hex(format string, a ...interface{}) HexString {
 	return HexString(format)
 }
 
+// 是否为零
+func (s HexString) IsZero() bool {
+	re := regexp.MustCompile("^(0[xX])?[0]*$")
+	return re.MatchString(string(s))
+}
+
 // 是否为有效
 func (s HexString) IsValid() bool {
 	re := regexp.MustCompile("^(0[xX])?[0-9a-fA-F]*$")

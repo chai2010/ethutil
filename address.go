@@ -71,7 +71,9 @@ func GenEIP55Address(address string) string {
 // EIP55通过十六进制的大小写来保存校验码信息
 //
 // 参考 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
-func (address HexString) IsValidEIP55Address() bool {
+func (s HexString) IsValidEIP55Address() bool {
+	var address = s
+
 	// 添加缺少的 0x 前缀
 	if len(address) > 2 {
 		if address[0] != '0' || (address[1] != 'x' && address[1] != 'X') {
