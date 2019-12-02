@@ -43,7 +43,7 @@ func GenPublicKey(privateKey string) string {
 
 	// 格式化公钥
 	// 以太坊公钥以04开头, 然后是x和y的十六进制格式字符串
-	var publicKey = fmt.Sprintf("04%064x%64x", Kx, Ky)
+	var publicKey = fmt.Sprintf("04%064x%064x", Kx, Ky)
 
 	// OK
 	return publicKey
