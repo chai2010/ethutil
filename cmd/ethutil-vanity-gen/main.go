@@ -24,11 +24,12 @@ import (
 )
 
 var (
-	flagPrefix = flag.String("p", "", "地址前缀, 必须是十六进制格式 ([0-9a-f]*)")
-	flagSuffix = flag.String("s", "", "地址后缀, 必须是十六进制格式 ([0-9a-f]*)")
-	flagRegexp = flag.String("re", "", "正则模式, 需要字节验证")
-	flagNumKey = flag.Int("n", 1, "生成几个地址")
-	flagHelp   = flag.Bool("h", false, "显示帮助")
+	flagPrefix    = flag.String("p", "", "地址前缀, 必须是十六进制格式 ([0-9a-f]*)")
+	flagSuffix    = flag.String("s", "", "地址后缀, 必须是十六进制格式 ([0-9a-f]*)")
+	flagRegexp    = flag.String("re", "", "正则模式, 需要字节验证")
+	flagPrefixPrv = flag.String("p-prv", "", "私钥前缀, 必须是十六进制格式 ([0-9a-f]*)")
+	flagNumKey    = flag.Int("n", 1, "生成几个地址")
+	flagHelp      = flag.Bool("h", false, "显示帮助")
 )
 
 func init() {
@@ -78,13 +79,13 @@ func main() {
 	}
 
 	for i := 0; i < *flagNumKey; i++ {
-		key, addr := genVanityEth(*flagPrefix, *flagSuffix, *flagRegexp)
+		key, addr := genVanityEth(*flagPrefixPrv, *flagPrefix, *flagSuffix, *flagRegexp)
 		fmt.Println(i, addr, key)
 	}
 }
 
-func genVanityEth(prefix, suffix, reExpr string) (key, addr string) {
-	fmt.Printf("prefix=%q, suffix=%q, reExpr=%q\n", prefix, suffix, reExpr)
+func genVanityEth(prefixPrv, prefix, suffix, reExpr string) (key, addr string) {
+	fmt.Printf("prefixPrv=%q, prefix=%q, suffix=%q, reExpr=%q\n", prefixPrv, prefix, suffix, reExpr)
 
 	if reExpr == "" {
 		reExpr = ".*"
@@ -102,7 +103,8 @@ func genVanityEth(prefix, suffix, reExpr string) (key, addr string) {
 		key = ethutil.GenPrivateKey()
 		addr = ethutil.GenAddressFromPrivateKey(key)
 
-		if strings.HasPrefix(addr[2:], prefix) &&
+		if strings.HasPrefix(key, prefixPrv) &&
+			strings.HasPrefix(addr[2:], prefix) &&
 			strings.HasSuffix(addr, suffix) &&
 			re.MatchString(addr[2:]) {
 			return
