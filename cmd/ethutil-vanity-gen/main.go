@@ -16,6 +16,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/chai2010/ethutil"
@@ -53,6 +54,19 @@ func main() {
 	if *flagHelp {
 		flag.Usage()
 		os.Exit(0)
+	}
+
+	if s := *flagPrefix; s != "" {
+		if !regexp.MustCompile("^[0-9a-f]*$").MatchString(string(s)) {
+			fmt.Printf("非法的前缀参数: %q\n", s)
+			os.Exit(1)
+		}
+	}
+	if s := *flagSuffix; s != "" {
+		if !regexp.MustCompile("^[0-9a-f]*$").MatchString(string(s)) {
+			fmt.Printf("非法的后缀参数: %q\n", s)
+			os.Exit(1)
+		}
 	}
 
 	for i := 0; i < *flagNumKey; i++ {
