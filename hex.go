@@ -33,6 +33,11 @@ func HexFromBigint(x *big.Int) HexString {
 	return HexString(fmt.Sprintf("%x", x))
 }
 
+// 返回Wei(忽略益处情况)
+func (s HexString) Wei() int64 {
+	return s.MustInt()
+}
+
 // 返回GWei
 // quo是整数部分, rem是余数部分
 func (s HexString) GWei() (quo, rem int64) {
