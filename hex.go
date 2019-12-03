@@ -23,6 +23,36 @@ func Hex(format string, a ...interface{}) HexString {
 	return HexString(format)
 }
 
+// 从整数生成
+func HexFromInt(x int64) HexString {
+	return HexString(fmt.Sprintf("%x", x))
+}
+
+// 从大整数生成
+func HexFromBigint(x *big.Int) HexString {
+	return HexString(fmt.Sprintf("%x", x))
+}
+
+// 返回GWei
+// quo是整数部分, rem是余数部分
+func (s HexString) GWei() (quo, rem int64) {
+	var x = s.MustBigint()
+	var y = big.NewInt(GWei)
+	quo = new(big.Int).Div(x, y).Int64()
+	rem = new(big.Int).Mod(x, y).Int64()
+	return
+}
+
+// 返回Ether
+// quo是整数部分, rem是余数部分
+func (s HexString) Ether() (quo, rem int64) {
+	var x = s.MustBigint()
+	var y = big.NewInt(Ether)
+	quo = new(big.Int).Div(x, y).Int64()
+	rem = new(big.Int).Mod(x, y).Int64()
+	return
+}
+
 // 是否为零
 func (s HexString) IsZero() bool {
 	re := regexp.MustCompile("^(0[xX])?[0]*$")
