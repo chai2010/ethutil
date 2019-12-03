@@ -33,6 +33,13 @@ type TxData struct {
 	S *big.Int
 }
 
+// RLP编码签名过后的交易
+func (p *TxData) EncodeRLP() []byte {
+	var buf bytes.Buffer
+	rlp.Encode(&buf, p)
+	return buf.Bytes()
+}
+
 // 生成最新规范的要签名编码数据
 func (p *TxData) SigData() []byte {
 	// 输出EIP55之后的格式, 不包含 chainId
