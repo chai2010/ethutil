@@ -27,6 +27,10 @@ type TxData struct {
 	To       string // 0地址 表示合约
 	Value    string
 	Data     []byte
+
+	V *big.Int
+	R *big.Int
+	S *big.Int
 }
 
 // 生成最新规范的要签名编码数据
