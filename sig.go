@@ -17,7 +17,11 @@ var (
 
 // 私钥签名
 // 涉及的字符串都是十六进制编码格式
-func Sign(privateKey, digestHash string) (hexSig string, err error) {
+func Sign(privateKey string, hash []byte) (sig []byte, err error) {
+	if len(hash) != 32 {
+		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
+	}
+
 	var c elliptic.Curve = btcec.S256()
 	var priv = new(btcec.PrivateKey)
 
@@ -25,28 +29,31 @@ func Sign(privateKey, digestHash string) (hexSig string, err error) {
 	priv.D = Hex(privateKey).MustBigint()
 	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(Hex(privateKey).MustBytes())
 
-	sig, err := btcec.SignCompact(btcec.S256(), priv, Hex(digestHash).MustBytes(), false)
+	sig, err = btcec.SignCompact(btcec.S256(), priv, hash, false)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// Convert to Ethereum signature format with 'recovery id' v at the end.
+	// r: sig[0:32]
+	// s: sig[32:64]
+	// v: sig[64]
 	v := sig[0] - 27
 	copy(sig, sig[1:])
 	sig[64] = v
 
-	return Hex("%x", sig).String(), nil
+	// ok
+	return sig, nil
 }
 
 // 公钥验证签名
 // 涉及的字符串都是十六进制编码格式
-func VerifySignature(pubkey, hash, signature string) bool {
-	if len(signature) != 128 {
+func VerifySignature(pubkey string, hash, signature []byte) bool {
+	if len(signature) < 64 {
 		return false
 	}
 	sig := &btcec.Signature{
-		R: Hex(signature[:64]).MustBigint(),
-		S: Hex(signature[64:]).MustBigint(),
+		R: new(big.Int).SetBytes(signature[:32]),
+		S: new(big.Int).SetBytes(signature[32:64]),
 	}
 	key, err := btcec.ParsePubKey(
 		Hex(pubkey).MustBytes(), btcec.S256(),
@@ -58,18 +65,22 @@ func VerifySignature(pubkey, hash, signature string) bool {
 	if sig.S.Cmp(secp256k1halfN) > 0 {
 		return false
 	}
-	return sig.Verify(Hex(hash).MustBytes(), key)
+	return sig.Verify(hash, key)
 }
 
 // 签名导出公钥
-// 涉及的字符串都是十六进制编码格式
-func SigToPub(msgHash, sig string) (publicKey string, err error) {
-	pub, _, err := btcec.RecoverCompact(btcec.S256(),
-		Hex(sig).MustBytes(),
-		Hex(msgHash).MustBytes(),
-	)
+func SigToPub(hash, sig []byte) (publicKey string, err error) {
+	// 将v移到开头, 并加上27, 对应比特币的签名格式
+	btcsig := make([]byte, 64+1)
+	btcsig[0] = sig[64] + 27
+	copy(btcsig[1:], sig)
 
-	publicKey = fmt.Sprintf("04%064x%64x", pub.X, pub.Y)
+	pub, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, hash)
+	if err != nil {
+		return "", err
+	}
+
+	publicKey = fmt.Sprintf("04%064x%064x", pub.X, pub.Y)
 	return
 }
 
