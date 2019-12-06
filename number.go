@@ -111,28 +111,34 @@ func ParseBigint(s string, base int) (v *big.Int, err error) {
 		switch {
 		case s[1] == 'b' || s[1] == 'B':
 			if base != 0 && base != 2 {
+				println("ParseBigint 11")
 				return nil, fmt.Errorf("ethutil.ParseBigint: invalid base %d", base)
 			}
 			v, ok := new(big.Int).SetString(s[2:], 2)
 			if !ok {
+				println("ParseBigint 22")
 				return nil, fmt.Errorf("ethutil.ParseBigint: invalid bigint %q", s)
 			}
 			return v, nil
 		case s[1] == 'o' || s[1] == 'O':
 			if base != 0 && base != 8 {
+				println("ParseBigint 33")
 				return nil, fmt.Errorf("ethutil.ParseBigint: invalid base %d", base)
 			}
 			v, ok := new(big.Int).SetString(s[2:], 8)
 			if !ok {
+				println("ParseBigint 44")
 				return nil, fmt.Errorf("ethutil.ParseBigint: invalid bigint %q", s)
 			}
 			return v, nil
 		case s[1] == 'x' || s[1] == 'X':
 			if base != 0 && base != 16 {
+				println("ParseBigint 55")
 				return nil, fmt.Errorf("ethutil.ParseBigint: invalid base %d", base)
 			}
 			v, ok := new(big.Int).SetString(s[2:], 16)
 			if !ok {
+				println("ParseBigint 66")
 				return nil, fmt.Errorf("ethutil.ParseBigint: invalid bigint %q", s)
 			}
 			return v, nil
@@ -143,12 +149,14 @@ func ParseBigint(s string, base int) (v *big.Int, err error) {
 	if base > 0 {
 		v, ok := new(big.Int).SetString(s, base)
 		if !ok {
+			println("ParseBigint 77")
 			return nil, fmt.Errorf("ethutil.ParseBigint: invalid bigint %q", s)
 		}
 		return v, nil
 	} else {
 		v, ok := new(big.Int).SetString(s, 10)
 		if !ok {
+			println("ParseBigint 88")
 			return nil, fmt.Errorf("ethutil.ParseBigint: invalid bigint %q", s)
 		}
 		return v, nil

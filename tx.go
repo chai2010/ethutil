@@ -117,10 +117,10 @@ func (p *TxData) sigData(chainId, blockNumber int64) []byte {
 		S *big.Int
 	}{
 		Nonce:    p.Nonce,
-		GasPrice: MustBigint(p.GasPrice, 0),
-		GasLimit: MustUint64(p.GasLimit, 0),
+		GasPrice: MustBigint(p.GasPrice, 16),
+		GasLimit: MustUint64(p.GasLimit, 16),
 		To:       p_To,
-		Value:    MustBigint(p.Value, 0),
+		Value:    MustBigint(p.Value, 16),
 		Data:     p.Data,
 	}
 
